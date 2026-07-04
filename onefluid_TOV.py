@@ -2,12 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Όλα τα μεγέθη του κώδικα και οι εξισώσεις είναι στο SI
-G = 6.67e-11         
-c = 299792458.         
+G = 6.67e-11  # m^3 kg^-1 s^-2       
+c = 299792458.    #m/s     
 pi = np.pi
-M_sun = 1.9891e30      
+M_sun = 1.9891e30 #kg      
 
-# Παράμετροι Καταστατικής Εξίσωσης Βαρυονικής Ύλης (Piecewise Polytrope)
 gamma0, gamma1, gamma2 = 1.6021, 1.3030, 0.6165
 gamma3, gamma4, gamma5, gamma6 = 1.3397, 2.1052, 3.0053, 2.8605
 rho_1 = 1.229e10
@@ -103,13 +102,13 @@ def initialize(dr, P_Bc):
     m_B0 = (4/3) * pi * dr**3 * (eps_Bc/c**2)
     return np.array([P_Bc, m_B0, 0.0], dtype=np.float64)
 
-def integrate_tov(P_Bc, dr=1):
+def integrate_tov(P_Bc, dr=10):
     """Ολοκλήρωση με μέθοδο Runge-Kutta 4 (RK4)."""
     r = float(dr)
     y = initialize(dr, P_Bc)
     history = []
     
-    for _ in range(1, 500000):
+    for _ in range(1, 300000):
         history.append(tuple((r, *y)))
         
         # Αν η πίεση μηδενίστηκε, φτάσαμε στην επιφάνεια του αστέρα
@@ -128,13 +127,12 @@ def integrate_tov(P_Bc, dr=1):
             
     return np.array(history)
 
-def find_Pc_for_target_mass(target_mass_sol, tol=1e-4):
+def find_Pc_for_target_mass(target_mass_sol, tol=1e-3):
     """Βρίσκει την κεντρική πίεση που δίνει την επιθυμητή μάζα με bisection."""
-    P_vals = np.logspace(33.0, 35.5, 50)
+    P_vals = np.logspace(32.5, 36.5, 40)
     P_min, P_max = None, None
     prev_mass = 0.0
-    
-    # 1. Βρίσκουμε το διάστημα (bracket)
+
     for i in range(len(P_vals)):
         sol = integrate_tov(P_vals[i], dr=10) # Μεγάλο dr για γρήγορο ψάξιμο
         curr_mass = sol[-1, 2] / M_sun
@@ -149,7 +147,7 @@ def find_Pc_for_target_mass(target_mass_sol, tol=1e-4):
     if P_min is None:
         return None
         
-    # 2. Bisection για ακρίβεια
+ 
     for _ in range(50):
         P_mid = 0.5 * (P_min + P_max)
         sol = integrate_tov(P_mid, dr=1)
@@ -164,7 +162,7 @@ def find_Pc_for_target_mass(target_mass_sol, tol=1e-4):
     return P_mid
 
 # ==========================================
-# ΕΚΤΕΛΕΣΗ ΚΑΙ ΣΧΕΔΙΑΣΜΟΣ (MAIN)
+# ΕΚΤΕΛΕΣΗ ΚΑΙ ΣΧΕΔΙΑΣΜΟΣ 
 # ==========================================
 target_mass = 1.44
 
@@ -172,14 +170,14 @@ print(f"Υπολογισμός για Αμιγώς Βαρυονικό Αστέρ
 P_Bc_ideal = find_Pc_for_target_mass(target_mass)
 
 if P_Bc_ideal is not None:
-    # Ολοκλήρωση με μικρό βήμα για ομαλό διάγραμμα
-    sol = integrate_tov(P_Bc_ideal, dr=10)
+
+    sol = integrate_tov(P_Bc_ideal, dr=25)
     r_vals = sol[:, 0] / 1000  # Μετατροπή σε km
     P_B_vals = sol[:, 1]
     
     R_B = r_vals[-1]
     
-    # Εξαγωγή του προφίλ πυκνότητας (rho)
+  
     rho_B_vals = np.zeros_like(r_vals)
     for i in range(len(r_vals)):
         eps_B, rho_B = eos_baryon_from_pressure(P_B_vals[i])
@@ -187,7 +185,7 @@ if P_Bc_ideal is not None:
         
     print(f"-> Επιτυχία! R_B = {R_B:.2f} km, M = {sol[-1, 2]/M_sun:.4f} M_sun")
     
-    # Σχεδιασμός του Διαγράμματος
+
     plt.figure(figsize=(10, 6))
     plt.plot(r_vals, rho_B_vals, label="Pure Baryonic", color='black', linewidth=2)
     
